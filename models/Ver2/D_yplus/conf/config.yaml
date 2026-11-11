@@ -1,0 +1,50 @@
+defaults:
+  - physicsnemo_default
+  - arch:
+      - fourier
+      - fully_connected
+  - optimizer: adam
+  - scheduler: tf_exponential_lr
+  - loss: sum
+  - _self_
+
+custom:
+  stage: initialize  # initialize -> mixed -> physics (see RUN.md)
+jit: false
+cuda_graphs: false
+scheduler:
+  decay_rate: 0.95
+  decay_steps: 8000
+optimizer:
+  lr: 1.0e-4
+network_dir: network_checkpoint_ls
+initialization_network_dir: ''
+save_filetypes: "vtp"
+training:
+  rec_validation_freq: 1000
+  rec_inference_freq: 1000
+  rec_monitor_freq: 1000
+  rec_constraint_freq: 1000
+  max_steps: 3000
+batch_size:
+  inlet: 640
+  outlet: 640
+  top_bot: 640
+  airfoil: 512
+  interior_far_field: 7000
+  interior_near_field: 7000
+
+hydra:
+  job:
+    chdir: false
+
+arch:
+  fully_connected:
+    layer_size: 512
+    nr_layers: 6
+
+  fourier:
+    layer_size: 512
+    nr_layers: 6
+    frequencies: ["axis", [0.0, 0.25, 0.5, 1.0, 2.0]]
+    frequencies_params: ["axis", [0.0, 0.25, 0.5, 1.0, 2.0]]
