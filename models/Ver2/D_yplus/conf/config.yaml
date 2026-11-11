@@ -9,7 +9,7 @@ defaults:
   - _self_
 
 custom:
-  stage: initialize  # initialize -> mixed -> physics (see RUN.md)
+  stage: initialize  # initialize -> mixed -> physics (see RUN_NOTES.md)
 jit: false
 cuda_graphs: false
 scheduler:

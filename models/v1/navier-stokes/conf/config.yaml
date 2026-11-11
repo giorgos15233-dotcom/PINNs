@@ -1,0 +1,59 @@
+# SPDX-FileCopyrightText: Copyright (c) 2023 - 2024 NVIDIA CORPORATION & AFFILIATES.
+# SPDX-FileCopyrightText: All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+defaults :
+  - physicsnemo_default
+  - arch:
+      - fully_connected
+  - scheduler: tf_exponential_lr
+  - optimizer: adam  #adam until step 100000, then change to L-BFGS
+  - loss: sum
+  - _self_
+
+
+    ##############            add the following at step 120000           ##################
+
+    #optimizer:
+    #  lr: 1.0
+    #  max_iter: 3000          # Allow up to 3000 substeps
+    #  max_eval: 3500          # Set slightly above max_iter
+    #  history_size: 50        # Limit history to fit the RTX 4500 memory budget
+    #  tolerance_grad: 1e-9    # Use a tight gradient tolerance
+    #  tolerance_change: 1e-12 # Use a tight parameter-change tolerance
+    #  line_search_fn: strong_wolfe
+
+    #########################################################################################
+
+scheduler:
+  decay_rate: 0.95
+  decay_steps: 2000
+
+training:
+  rec_results_freq : 1000
+  rec_constraint_freq: 10000
+  max_steps : 200000
+
+batch_size:
+  inlet: 512
+  outlet: 512
+  top_bot: 512
+  airfoil: 640
+  interior_far_field: 7000
+  interior_near_field: 7000
+
+cuda_graphs: False
+  ##run_mode: eval
+jit: false

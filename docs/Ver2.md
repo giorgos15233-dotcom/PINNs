@@ -1,11 +1,13 @@
-# Σύγκριση Ver2
+# Ver2 wall-function experiments
 
-NACA 0012, α = 0°, Re = 10⁶. Η παρούσα ενημέρωση αντικαθιστά την αρχική εκτίμηση για το B και το D_yplus. Ο πίνακας Ver2_comparison.csv δίνει Cl, Cd, συνιστώσες και y⁺. Η απόκλιση υπολογίζεται από το Cd = 0,0065 της πολικής Eppler (Sandia SAND80-2114, πίνακας 2).
+| Attempt | Saved step | Mean y⁺ | Cd from gradients | Cd from surface uτ² |
+|---|---:|---:|---:|---:|
+| A | 400,000 | 1.02 | unavailable | unavailable |
+| B | 115,000 | 1.02 | 0.009337 | 0.009413 |
+| D_yplus | unknown | 50.95 | 0.062927 | 0.060131 |
 
-Το A φτάνει στα 400.000 βήματα με loss 2,68×10⁻⁵, αλλά y⁺ = 1,02. Τα δύο optimizer checkpoints των 400.000 είναι πανομοιότυπα. Απουσιάζει επιφανειακή πίεση για την κοινή ολοκλήρωση. Στο B στα 115.000 βήματα, η επιφανειακή k έχει τιμή 10⁻¹⁰ και το y⁺ στα σημεία τοίχου είναι 1,02. Το Cd είναι κατά 44–45% υψηλότερο από την αναφορά και οφείλεται σχεδόν όλο στην πίεση.
+A provides a near-field export and wall constraints. The comparable surface-pressure integral requires a separate boundary export. At the last checkpoint the aggregated loss was 2.68×10⁻⁵, while all 512 sampled wall points had y⁺ near 1.02.
 
-Στο D_yplus τα 512 σημεία P έχουν y⁺ από 45,58 έως 57,65. Και στα 512 το u είναι αρνητικό. Με uτ² προκύπτει Cd πίεσης 0,06308 και τριβής −0,00295, με συνολικό Cd 0,06013. Το D διαθέτει πεδία αλλά δεν συνοδεύεται από αριθμημένο checkpoint ή ιστορικό loss. Το τοπικό script ενεργοποιεί ένα σετ inferencers, ενώ υπάρχουν επτά αριθμημένα σετ. Τα στοιχεία τεκμηριώνουν το συγκεκριμένο snapshot.
+B reached an aggregated loss of 1.44×10⁻³. At the 512 surface points k was 10⁻¹⁰. The friction share was 0.47% using gradients and approximately zero using surface uτ². The saved A and B scripts request conf/ while the archived YAML resides in config/. A also references an external geometry module, and B's archived turbulence module has a _B suffix absent from its import.
 
-Χρησιμοποιήθηκαν τα boundary_1 και near_field_1 και τα ίδια δύο ParaView states όπως στην αρχική αξιολόγηση. Για τις βαθμίδες η διόρθωση του ιξώδους είναι 50000/Re. Για το uτ² χρησιμοποιήθηκαν τα 0Pressure_Sur και 0ViscF_Sur. Παλιές διαδρομές του state έδωσαν σφάλματα σε άλλους κλάδους. Η άντωση κρίνεται μέσω |Cl| λόγω διαφορετικής σύμβασης των pipelines. Στα A και B το y⁺ προκύπτει από uτ·normal_distance/ν στα constraint points. Στο D διαβάστηκε το y_plus_wall του AirfoilWallAtP.
-
-Για διπλωματική, κράτησε k_e_ree6 και ree6_2 ως κύρια αποτελέσματα και τη Ver2 ως ελεγχόμενη σύγκριση αποτυχιών. Το χαμηλό loss και το επιθυμητό y⁺ δεν επαρκούν για την ανάκτηση της οπισθέλκουσας. Το κλάσμα τριβής εξαρτάται από τη μέθοδο εξαγωγής.
+In D_yplus, all 512 P points were within the specified wall-coordinate interval and all had negative streamwise velocity. The wall-function integration gave pressure drag 0.06308 and signed friction drag −0.00295. The export lacks a numbered checkpoint and loss history. The archived script enables one inference set while the output folder contains seven numbered sets. The comparison uses boundary_1 and near_field_1. [Measurements](../results/Ver2_comparison.csv) · [Stage commands](../models/Ver2/D_yplus/RUN_NOTES.md)

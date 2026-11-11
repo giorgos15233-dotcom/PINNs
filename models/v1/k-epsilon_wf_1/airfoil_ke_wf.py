@@ -129,7 +129,7 @@ def run(cfg: PhysicsNeMoConfig) -> None:
 
     custom_channel_length = 1.2
     custom_channel_height = 0.4
-    x_fraction_custom = 0.2  # Το αφήνουμε 0.2 για να έχει 20% του μήκους μπροστά από την αεροτομή
+    x_fraction_custom = 0.2  # Reserve 20% of the sampling length upstream of the airfoil
 
     volume_custom_field = AirfoilInChannel(
         x_min=-custom_channel_length * x_fraction_custom,

@@ -1,29 +1,52 @@
-# PINNs
+# Airfoil aerodynamics with physics-informed neural networks
 
-Physics Informed Neural Networks for aerodynamics on airfoils based on https://github.com/NVIDIA/physicsnemo-sym.
+Can a network recover the forces on a symmetric airfoil from the governing equations and boundary conditions? This thesis studies steady, two-dimensional flow over a NACA 0012 at zero incidence. The three selected models use the same chord Reynolds number, **Re = 1,000,000**. This makes differences in lift, drag and wall treatment visible without changing the operating point.
 
-## NACA 0012 στις 0° και Re = 10⁶
+The author reports more than 200 exploratory trials across the wider thesis project. The public inventory documents the three selected v1 models.
 
-Το `k_e_ree6` πλησίασε περισσότερο τη συνολική οπισθέλκουσα αναφοράς. Στο `ree6_2`, η εκτίμηση της τριβής εξαρτήθηκε έντονα από τον τρόπο εξαγωγής της διατμητικής τάσης.
+## Three models at the same Reynolds number
 
-| Μοντέλο | Βήμα πεδίου | Μέθοδος | Cl | Cd | Απόκλιση Cd | Τριβή / σύνολο |
-|---|---:|---|---:|---:|---:|---:|
-| k_e_ree6 | 200.000 | Βαθμίδες | −0,000227 | 0,006210 | −4,47% | 2,17% |
-| ree6_2 | 44.000 | Βαθμίδες | +0,0000191 | 0,001141 | −82,44% | 3,01% |
-| ree6_2 | 44.000 | Επιφανειακό uτ² | −0,00000677 | 0,005684 | −12,55% | 80,63% |
-| Navier–Stokes | 200.000 | Βαθμίδες | −0,003675 | 0,001734 | −73,32% | 19,26% |
+| Model | Equations and wall treatment | Field step |
+|---|---|---:|
+| [Navier–Stokes](models/v1/navier-stokes/) | Steady incompressible continuity and momentum. The network predicts streamwise velocity, transverse velocity and pressure. | 200,000 |
+| [Standard k–ε](models/v1/k-epsilon/) | RANS with transport equations for turbulent kinetic energy and dissipation. The airfoil constraint imposes zero velocity and zero turbulent kinetic energy. | 200,000 |
+| [Wall-function k–ε](models/v1/k-epsilon_wf_1/) | RANS with a Launder–Spalding equilibrium wall treatment. Off-wall distance and friction velocity enter the near-wall closure. | 44,000 |
 
-Η σύγκριση χρησιμοποιεί Cd αναφοράς 0,0065. Η κοντινή τιμή του k_e_ree6 συνοδεύεται από 97,83% οπισθέλκουσα πίεσης. [Μεθοδολογία και πηγή αναφοράς](docs/method.md)
+The geometry and sampling build on NVIDIA's PhysicsNeMo Sym NACA example. A signed-distance representation distinguishes the airfoil from the fluid. The training objective combines residuals of the differential equations in the fluid with inlet, outlet and airfoil constraints. The saved inference points provide a common geometry for inspecting the pressure and velocity distributions. [NVIDIA airfoil example](https://github.com/NVIDIA/physicsnemo-sym/tree/main/examples/airfoil_pinn/naca)
 
-![Συνιστώσες οπισθέλκουσας και συμμετρία](figures/comparison.png)
+## Lift, drag and the source of wall friction
 
-## Τι έδειξαν οι δοκιμές Ver2
+A symmetric airfoil at zero incidence should give lift close to zero. The table reports absolute lift because the two post-processing pipelines use different lift signs. The drag reference is **0.0065**, the zero-incidence Eppler polar in Table 2 of Sheldahl and Klimas. It is a numerical reference for total drag. [Sandia report SAND80-2114](https://www.osti.gov/servlets/purl/6548367)
 
-Στο A, το loss έφτασε τα 2,68×10⁻⁵ ενώ το μέσο y⁺ παρέμεινε στο 1,02. Στο B, το Cd ήταν κατά 44–45% υψηλότερο από την αναφορά και σχεδόν όλη η αντίσταση προήλθε από πίεση. Στο D_yplus, και τα 512 σημεία P έφτασαν στο επιθυμητό εύρος y⁺, αλλά είχαν αρνητική διαμήκη ταχύτητα. Η εξαγωγή uτ² έδωσε Cd = 0,06013. Το βήμα του συγκεκριμένου snapshot παραμένει άγνωστο. [Ανάλυση Ver2](docs/Ver2.md) · [Τιμές ανά μέθοδο](results/Ver2_comparison.csv)
+| Model and extraction | Absolute Cl | Cd | Difference from reference | Friction share |
+|---|---:|---:|---:|---:|
+| Navier–Stokes, velocity gradients | 0.003675 | 0.001734 | −73.32% | 19.26% |
+| Standard k–ε, velocity gradients | 0.000227 | 0.006210 | −4.47% | 2.17% |
+| Wall-function k–ε, velocity gradients | 0.0000191 | 0.001141 | −82.44% | 3.01% |
+| Wall-function k–ε, surface friction velocity | 0.00000677 | 0.005684 | −12.55% | 80.63% |
 
-## Κώδικας και δεδομένα
+![Pressure and friction drag alongside absolute lift for the three v1 models](figures/comparison.png)
 
-- [Μοντέλα](models/) — πηγαίος κώδικας και Hydra YAML για τις δύο κύριες περιπτώσεις, τα A/B/D_yplus, το ls_v2 και το ver4. Τα scripts αποτελούν αρχειακά αντίγραφα από τον υπολογιστή εκπαίδευσης. Στα Ver2/A και B το YAML βρίσκεται στο config/ ενώ ο decorator αναζητά conf/. Στο A λείπει το τοπικό custom_airfoil_geometry και στο B το όνομα του αποθηκευμένου custom_k_ep_ls_B.py διαφέρει από το import.
-- [Τελευταία διαθέσιμα βήματα](results/latest_runs.csv) · [Πέντε επιλεγμένες περιπτώσεις](results/03_selected.csv) · [Καμπύλες loss](figures/loss.png).
-- [Αρχεία πεδίου](fields/) — ανοίξτε boundary_1.vtp και near_field_1.vtp στο ParaView. Για τις πέντε επιλεγμένες περιπτώσεις το surface.csv δίνει επίσης συντεταγμένες, πίεση και ταχύτητες.
-- [Απογραφή εκδόσεων](inventory/01_versions.csv) · [Σύνοψη αλλαγών ανά μοντέλο](inventory/version_models.csv) · [Διαφορές κώδικα](inventory/code_diffs.zip).
+Standard k–ε gives the closest total drag, with **97.83% attributed to pressure**. For the wall-function model, changing the shear extraction on the *same saved field* moves the friction share from **3.01% to 80.63%**. The force split therefore depends on the post-processing method. Independent pressure and skin-friction data at matching flow and transition conditions would be needed to validate either split. [Numerical results](results/v1.csv) · [Force definitions](docs/method.md)
+
+## What the saved fields show
+
+The standard k–ε pressure profiles on the two sides largely overlap, as expected from symmetry, with isolated deviations in the saved samples. The lower-surface spike near x/c = 0.33 is visible even though the integrated drag is close to the reference.
+
+![Upper and lower surface profiles for pressure, velocity, turbulent kinetic energy and dissipation at step 200000](fields/k-epsilon/boundary.png)
+
+The wall-function near field shows a streamwise velocity deficit behind the trailing edge and elevated turbulent kinetic energy close to the airfoil. Each panel uses its own color scale, printed alongside it. The pressure shown is the exported static pressure.
+
+![Near-field pressure, velocity components, turbulent kinetic energy and dissipation from the wall-function model](fields/k-epsilon_wf_1/near_field.png)
+
+[Field gallery and ParaView files](fields/README.md) · [Training loss histories](figures/loss.png)
+
+## Wall-function development
+
+The Ver2 attempts test whether moving the evaluation points and controlling their local wall coordinate improves aerodynamic predictions. At a point a distance d into the fluid, the equilibrium closure uses uτ = Cμ^(1/4) √k and y⁺ = uτd/ν. D_yplus projects sampled points onto the curved surface, constructs an outward offset and applies the shear condition along a local tangent. Soft limits on y⁺ target the modeled log layer. The initialization, mixed and physics stages share a checkpoint. [D_yplus implementation and sources](models/Ver2/D_yplus/SOURCES_AND_METHOD.md) · [Stage commands](models/Ver2/D_yplus/RUN_NOTES.md)
+
+At step 400,000, A had a loss of 2.68×10⁻⁵ and mean y⁺ of 1.02. B also had mean y⁺ of 1.02 and overpredicted drag by 44–45%. In D_yplus all 512 off-wall points reached y⁺ between 45.58 and 57.65, yet all had negative streamwise velocity. Its surface-friction estimate gave Cd = 0.06013. Wall-layer placement, training loss and integrated forces thus give different information about a run. [Ver2 measurements and limitations](docs/Ver2.md)
+
+## Using the repository
+
+The [selected version inventory](inventory/selected_versions.csv) connects the original run names to their model and field folders. The [v1 scripts](models/v1/) use the `physicsnemo.sym` API, with Hydra configurations beside each entry point. The [field plotting script](tools/plot_fields.py) reads saved VTP data using ParaView's Python environment with NumPy and Matplotlib. The training scripts were inspected statically during repository preparation. The exported field and force data can be examined independently of training.
