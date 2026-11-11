@@ -2,15 +2,15 @@
 
 Can a network recover the forces on a symmetric airfoil from the governing equations and boundary conditions? This thesis studies steady, two-dimensional flow over a NACA 0012 at zero incidence. The three selected models use the same chord Reynolds number, **Re = 1,000,000**. This makes differences in lift, drag and wall treatment visible without changing the operating point.
 
-The author reports more than 200 exploratory trials across the wider thesis project. The public inventory documents the three selected v1 models.
+The author reports more than 200 exploratory trials across the wider thesis project. The public inventory documents the three selected Ver1 models.
 
 ## Three models at the same Reynolds number
 
 | Model | Equations and wall treatment | Field step |
 |---|---|---:|
-| [Navier–Stokes](models/v1/navier-stokes/) | Steady incompressible continuity and momentum. The network predicts streamwise velocity, transverse velocity and pressure. | 200,000 |
-| [Standard k–ε](models/v1/k-epsilon/) | RANS with transport equations for turbulent kinetic energy and dissipation. The airfoil constraint imposes zero velocity and zero turbulent kinetic energy. | 200,000 |
-| [Wall-function k–ε](models/v1/k-epsilon_wf_1/) | RANS with a Launder–Spalding equilibrium wall treatment. Off-wall distance and friction velocity enter the near-wall closure. | 44,000 |
+| [Navier–Stokes](models/Ver1/navier-stokes/) | Steady incompressible continuity and momentum. The network predicts streamwise velocity, transverse velocity and pressure. | 200,000 |
+| [Standard k–ε](models/Ver1/k-epsilon/) | RANS with transport equations for turbulent kinetic energy and dissipation. The airfoil constraint imposes zero velocity and zero turbulent kinetic energy. | 200,000 |
+| [Wall-function k–ε](models/Ver1/k-epsilon_wf_1/) | RANS with a Launder–Spalding equilibrium wall treatment. Off-wall distance and friction velocity enter the near-wall closure. | 44,000 |
 
 The geometry and sampling build on NVIDIA's PhysicsNeMo Sym NACA example. A signed-distance representation distinguishes the airfoil from the fluid. The training objective combines residuals of the differential equations in the fluid with inlet, outlet and airfoil constraints. The saved inference points provide a common geometry for inspecting the pressure and velocity distributions. [NVIDIA airfoil example](https://github.com/NVIDIA/physicsnemo-sym/tree/main/examples/airfoil_pinn/naca)
 
@@ -25,19 +25,19 @@ A symmetric airfoil at zero incidence should give lift close to zero. The table 
 | Wall-function k–ε, velocity gradients | 0.0000191 | 0.001141 | −82.44% | 3.01% |
 | Wall-function k–ε, surface friction velocity | 0.00000677 | 0.005684 | −12.55% | 80.63% |
 
-![Pressure and friction drag alongside absolute lift for the three v1 models](figures/comparison.png)
+![Pressure and friction drag alongside absolute lift for the three Ver1 models](figures/comparison.png)
 
 Standard k–ε gives the closest total drag, with **97.83% attributed to pressure**. For the wall-function model, changing the shear extraction on the *same saved field* moves the friction share from **3.01% to 80.63%**. The force split therefore depends on the post-processing method. Independent pressure and skin-friction data at matching flow and transition conditions would be needed to validate either split. [Numerical results](results/v1.csv) · [Force definitions](docs/method.md)
 
 ## What the saved fields show
 
-The standard k–ε pressure profiles on the two sides largely overlap, as expected from symmetry, with isolated deviations in the saved samples. The lower-surface spike near x/c = 0.33 is visible even though the integrated drag is close to the reference.
+The standard k–ε near field at step 200,000 shows the exported static pressure, both velocity components, turbulent kinetic energy and dissipation. Each panel has its own color scale.
 
-![Upper and lower surface profiles for pressure, velocity, turbulent kinetic energy and dissipation at step 200000](fields/k-epsilon/boundary.png)
+![Standard k–ε near-field predictions at step 200,000](fields/k-epsilon/near_field.png)
 
-The wall-function near field shows a streamwise velocity deficit behind the trailing edge and elevated turbulent kinetic energy close to the airfoil. Each panel uses its own color scale, printed alongside it. The pressure shown is the exported static pressure.
+The wall-function model at step 44,000 provides upper- and lower-surface profiles of the same five quantities against chord position.
 
-![Near-field pressure, velocity components, turbulent kinetic energy and dissipation from the wall-function model](fields/k-epsilon_wf_1/near_field.png)
+![Wall-function k–ε upper- and lower-surface profiles at step 44,000](fields/k-epsilon_wf_1/boundary.png)
 
 [Field gallery and ParaView files](fields/README.md) · [Training loss histories](figures/loss.png)
 
@@ -49,4 +49,4 @@ At step 400,000, A had a loss of 2.68×10⁻⁵ and mean y⁺ of 1.02. B also ha
 
 ## Using the repository
 
-The [selected version inventory](inventory/selected_versions.csv) connects the original run names to their model and field folders. The [v1 scripts](models/v1/) use the `physicsnemo.sym` API, with Hydra configurations beside each entry point. The [field plotting script](tools/plot_fields.py) reads saved VTP data using ParaView's Python environment with NumPy and Matplotlib. The training scripts were inspected statically during repository preparation. The exported field and force data can be examined independently of training.
+The [selected version inventory](inventory/selected_versions.csv) connects the original run names to their model and field folders. The [Ver1 scripts](models/Ver1/) use the `physicsnemo.sym` API, with Hydra configurations beside each entry point. The [field plotting script](tools/plot_fields.py) reads saved VTP data using ParaView's Python environment with NumPy and Matplotlib. The training scripts were inspected statically during repository preparation. The exported field and force data can be examined independently of training.

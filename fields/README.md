@@ -11,4 +11,4 @@ The boundary plots trace the sampled upper and lower surfaces separately. Near-f
 | Ver2_B | [Boundary](Ver2_B/boundary.png) | [Near field](Ver2_B/near_field.png) |
 | Ver2_D_yplus | [Boundary](Ver2_D_yplus/boundary.png) | [Near field](Ver2_D_yplus/near_field.png) |
 
-Navier–Stokes exports p, u and v. The turbulence cases also export k and ep. A supplies a near-field snapshot. Open the adjacent VTP files in ParaView for point values and coordinates. For the three v1 models, surface.csv provides a tabular export of geometry, pressure and velocity. [File checksums](manifest.csv)
+Navier–Stokes exports p, u and v. The turbulence cases also export k and ep. A supplies a near-field snapshot. Open the adjacent VTP files in ParaView for point values and coordinates. For the three Ver1 models, surface.csv provides a tabular export of geometry, pressure and velocity. [File checksums](manifest.csv)
