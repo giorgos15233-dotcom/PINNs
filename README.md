@@ -1,2 +1,2 @@
 # PINNs
-Physics Informed Neural Networks based on https://github.com/NVIDIA/physicsnemo-sym.
+Physics Informed Neural Networks for aerodynamics on airfoils based on https://github.com/NVIDIA/physicsnemo-sym.
