@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import numpy as np
-from sympy import Symbol, Or, exp
+from sympy import Symbol, Or, Max, exp
 
 import physicsnemo.sym
 from physicsnemo.sym.key import Key
@@ -175,11 +175,6 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=inlet_geom,
         outvar={"u": u_inlet, "v": 0, "k": k_inlet_val, "ep": ep_inlet_val},
-        # Fixed physical-scale normalization (not adaptive weighting).
-        # These weights keep the exact original inlet boundary values.
-        lambda_weighting={"u": 1.0, "v": 1.0,
-                          "k": 1.0 / k_inlet_val**2,
-                          "ep": 1.0 / ep_inlet_val**2},
         batch_size=cfg.batch_size.inlet,
         parameterization=parameterization,
     )
@@ -200,10 +195,6 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=channel,
         outvar={"u": u_inlet, "v": 0, "k": k_inlet_val, "ep": ep_inlet_val},
-        # Same physical top/bottom BCs; normalize only the loss scales.
-        lambda_weighting={"u": 1.0, "v": 1.0,
-                          "k": 1.0 / k_inlet_val**2,
-                          "ep": 1.0 / ep_inlet_val**2},
         batch_size=cfg.batch_size.top_bot,
         parameterization=parameterization,
     )
@@ -215,8 +206,6 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=volume_near_field,
         outvar={"u": 0, "v": 0, "k": 0},
-        # No new near-wall closure: only nondimensionalize original k=0.
-        lambda_weighting={"u": 1.0, "v": 1.0, "k": 1.0 / k_inlet_val**2},
         batch_size=cfg.batch_size.airfoil,
         parameterization=parameterization,
     )
@@ -249,12 +238,21 @@ def run(cfg: PhysicsNeMoConfig) -> None:
     )
     domain.add_constraint(interior_far_field, "interior_far_field")
 
-    # Interior near field. Do NOT suppress PDE residuals at the wall by SDF->0.
+    # Restore the ORIGINAL near-field SDF residual weighting from k_e_ree6.
+    # In the absence of near-wall treatment, reduce standard k-epsilon PDE
+    # residual enforcement as SDF approaches the solid airfoil.
     interior_near_field = PointwiseInteriorConstraint(
         nodes=nodes,
         geometry=volume_near_field,
         outvar={"continuity": 0, "momentum_x": 0, "momentum_y": 0, "k_equation": 0, "ep_equation": 0},
         batch_size=cfg.batch_size.interior_near_field,
+        lambda_weighting={
+            "continuity": 2 * Max(Symbol("sdf"), 0),
+            "momentum_x": 2 * Max(Symbol("sdf"), 0),
+            "momentum_y": 2 * Max(Symbol("sdf"), 0),
+            "k_equation": 2 * Max(Symbol("sdf"), 0),
+            "ep_equation": 2 * Max(Symbol("sdf"), 0),
+        },
         parameterization=parameterization,
     )
     domain.add_constraint(interior_near_field, "interior_near_field")
