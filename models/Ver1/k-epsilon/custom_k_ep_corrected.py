@@ -28,11 +28,8 @@ class kEpsilonInit(PDE):
             "u_init": (u - u_inlet) / u_inlet,
             "v_init": v / u_inlet,
             "p_init": p / (u_inlet**2),
-            # Network logarithms: k=k_inlet*exp(k_star),
-            # ep=ep_inlet*exp(ep_star). Keeping initialization in
-            # log-space prevents gradients vanishing when k/ep get small.
-            "k_init": Symbol("k_star"),
-            "ep_init": Symbol("ep_star"),
+            "k_init": (k - k_inlet) / k_inlet,
+            "ep_init": (ep - ep_inlet) / ep_inlet,
         }
 
 
