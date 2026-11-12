@@ -175,6 +175,11 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=inlet_geom,
         outvar={"u": u_inlet, "v": 0, "k": k_inlet_val, "ep": ep_inlet_val},
+        # Fixed physical-scale normalization (not adaptive weighting).
+        # These weights keep the exact original inlet boundary values.
+        lambda_weighting={"u": 1.0, "v": 1.0,
+                          "k": 1.0 / k_inlet_val**2,
+                          "ep": 1.0 / ep_inlet_val**2},
         batch_size=cfg.batch_size.inlet,
         parameterization=parameterization,
     )
@@ -195,6 +200,10 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=channel,
         outvar={"u": u_inlet, "v": 0, "k": k_inlet_val, "ep": ep_inlet_val},
+        # Same physical top/bottom BCs; normalize only the loss scales.
+        lambda_weighting={"u": 1.0, "v": 1.0,
+                          "k": 1.0 / k_inlet_val**2,
+                          "ep": 1.0 / ep_inlet_val**2},
         batch_size=cfg.batch_size.top_bot,
         parameterization=parameterization,
     )
@@ -206,6 +215,8 @@ def run(cfg: PhysicsNeMoConfig) -> None:
         nodes=nodes,
         geometry=volume_near_field,
         outvar={"u": 0, "v": 0, "k": 0},
+        # No new near-wall closure: only nondimensionalize original k=0.
+        lambda_weighting={"u": 1.0, "v": 1.0, "k": 1.0 / k_inlet_val**2},
         batch_size=cfg.batch_size.airfoil,
         parameterization=parameterization,
     )
