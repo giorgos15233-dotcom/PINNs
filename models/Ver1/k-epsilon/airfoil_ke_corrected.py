@@ -15,7 +15,7 @@
 # limitations under the License.
 
 import numpy as np
-from sympy import Symbol, Or, Max, exp
+from sympy import Symbol, Or, Max, Abs, exp, log
 
 import physicsnemo.sym
 from physicsnemo.sym.key import Key
@@ -151,13 +151,30 @@ def run(cfg: PhysicsNeMoConfig) -> None:
     #############
     # Nodes
     #############
-    # Strict positivity with no artificial 1e-4 floors: preserve inlet turbulence scales.
-    # The k=0 wall constraint is approached as k_star -> -infinity; it is not hard-imposed.
+    # Numerically safe positivity. Never return zero for finite raw NN outputs,
+    # including when the softplus positive part underflows in float32.
+    # Floors are far below the freestream scales and the original 1e-4 floor.
+    # Stable softplus: log(1 + exp(-abs(z))) + max(z, 0); no exp(+large z).
+    # At k_star = ep_star = 0, outputs exactly match freestream targets.
+    k_floor = 1.0e-12
+    ep_floor = 1.0e-12
+    def stable_softplus(z):
+        return log(1 + exp(-Abs(z))) + Max(z, 0)
+
+    k_positive = k_floor + (
+        (k_inlet_val - k_floor) / log(2) * stable_softplus(Symbol("k_star"))
+    )
+    ep_positive = ep_floor + (
+        (ep_inlet_val - ep_floor) / log(2) * stable_softplus(Symbol("ep_star"))
+    )
+
+    # k=0 at the airfoil is approached to within its 1e-12 floor.
+    # This is still the same no-wall-function standard k-epsilon baseline.
     nodes: list = (
         k_ep_init.make_nodes()
         + k_ep_model.make_nodes()
-        + [Node.from_sympy(k_inlet_val * exp(Symbol("k_star")), "k")]
-        + [Node.from_sympy(ep_inlet_val * exp(Symbol("ep_star")), "ep")]
+        + [Node.from_sympy(k_positive, "k")]
+        + [Node.from_sympy(ep_positive, "ep")]
         + [flow_net.make_node(name="flow_network")]
         + [p_net.make_node(name="p_network")]
         + [k_net.make_node(name="k_network")]
