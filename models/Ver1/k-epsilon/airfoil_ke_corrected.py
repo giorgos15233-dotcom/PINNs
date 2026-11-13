@@ -15,7 +15,10 @@
 # limitations under the License.
 
 import numpy as np
-from sympy import Symbol, Or, Max, Abs, exp, log
+import torch.nn as nn
+import torch.nn.functional as F
+from math import log as math_log
+from sympy import Symbol, Or, Max
 
 import physicsnemo.sym
 from physicsnemo.sym.key import Key
@@ -35,6 +38,29 @@ from physicsnemo.sym.utils.io import InferencerPlotter
 from custom_airfoil_geometry_corrected import AirfoilInChannel
 # Importing the custom k-epsilon models and initialization
 from custom_k_ep_corrected import kEpsilonInit, kEpsilon
+
+
+class PositiveTurbulenceFields(nn.Module):
+    """Smooth, strictly positive k and epsilon for finite NN outputs.
+
+    PyTorch's native softplus is numerically stabilized and differentiable,
+    including its higher-order derivatives required by the PDE nodes.
+    """
+
+    def __init__(self, k_inlet, ep_inlet, floor=1.0e-12):
+        super().__init__()
+        if not (0 < floor < min(k_inlet, ep_inlet)):
+            raise ValueError("Floor must be positive and below both inlet values.")
+        self.floor = float(floor)
+        self.k_scale = float((k_inlet - floor) / math_log(2.0))
+        self.ep_scale = float((ep_inlet - floor) / math_log(2.0))
+
+    def forward(self, invar):
+        return {
+            "k": self.floor + self.k_scale * F.softplus(invar["k_star"]),
+            "ep": self.floor + self.ep_scale * F.softplus(invar["ep_star"]),
+        }
+
 
 @physicsnemo.sym.main(config_path="conf", config_name="config")
 def run(cfg: PhysicsNeMoConfig) -> None:
@@ -151,30 +177,23 @@ def run(cfg: PhysicsNeMoConfig) -> None:
     #############
     # Nodes
     #############
-    # Numerically safe positivity. Never return zero for finite raw NN outputs,
-    # including when the softplus positive part underflows in float32.
-    # Floors are far below the freestream scales and the original 1e-4 floor.
-    # Stable softplus: log(1 + exp(-abs(z))) + max(z, 0); no exp(+large z).
-    # At k_star = ep_star = 0, outputs exactly match freestream targets.
-    k_floor = 1.0e-12
-    ep_floor = 1.0e-12
-    def stable_softplus(z):
-        return log(1 + exp(-Abs(z))) + Max(z, 0)
-
-    k_positive = k_floor + (
-        (k_inlet_val - k_floor) / log(2) * stable_softplus(Symbol("k_star"))
-    )
-    ep_positive = ep_floor + (
-        (ep_inlet_val - ep_floor) / log(2) * stable_softplus(Symbol("ep_star"))
-    )
-
-    # k=0 at the airfoil is approached to within its 1e-12 floor.
-    # This is still the same no-wall-function standard k-epsilon baseline.
+    # Native PyTorch softplus avoids symbolic log(2) and Max/Abs lambdify
+    # problems, remains stable for large finite inputs, and preserves higher
+    # derivatives for RANS PDE residuals. At raw outputs 0: k=k_inf, ep=ep_inf.
+    # Real airfoil k=0 is approximated to the small strictly positive floor.
     nodes: list = (
         k_ep_init.make_nodes()
         + k_ep_model.make_nodes()
-        + [Node.from_sympy(k_positive, "k")]
-        + [Node.from_sympy(ep_positive, "ep")]
+        + [
+            Node(
+                inputs=["k_star", "ep_star"],
+                outputs=["k", "ep"],
+                evaluate=PositiveTurbulenceFields(
+                    k_inlet_val, ep_inlet_val, floor=1.0e-12
+                ),
+                name="positive_turbulence_fields",
+            )
+        ]
         + [flow_net.make_node(name="flow_network")]
         + [p_net.make_node(name="p_network")]
         + [k_net.make_node(name="k_network")]
